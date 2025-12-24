@@ -86,6 +86,13 @@ docker-compose up -d postgres redis
 docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
 ```
 
+**Windows UTF-8 Note**: If you encounter "stdio does not support writing non-UTF-8" error on Windows:
+```powershell
+# Set console to UTF-8 before running pnpm dev
+chcp 65001
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+```
+
 ### Build & Test
 
 ```bash
@@ -137,6 +144,52 @@ const buttonVariants = cva("base-classes", {
 })
 ```
 
+## Important Configuration Notes
+
+### Monorepo Configuration
+
+- **pnpm-workspace.yaml**: Uses pnpm's native workspace file (not `workspaces` in package.json)
+  ```yaml
+  packages:
+    - 'apps/*'
+    - 'packages/*'
+  ```
+
+- **turbo.json**: Uses `tasks` format (not `pipeline`) for Turbo v2+
+  ```json
+  {
+    "tasks": {
+      "build": { "dependsOn": ["^build"] },
+      "dev": { "cache": false, "persistent": true }
+    }
+  }
+  ```
+
+### Frontend Configuration
+
+- **postcss.config.cjs**: Must use `.cjs` extension (CommonJS) for Next.js compatibility
+- **Required devDependencies**: `@tanstack/react-query-devtools` must be in devDependencies
+- **Clear cache if needed**: `rm -rf apps/web/.next .turbo node_modules/.cache`
+
+### Backend Security Best Practices
+
+- **No hardcoded credentials**: Always use environment variables via `settings.DATABASE_URL`
+- **Logging not print**: Use `logging.getLogger()` instead of `print()` statements
+- **Environment-aware SSL**: SSL mode auto-configured based on `ENVIRONMENT` setting:
+  - `development` → `ssl=disable`
+  - `production` → `ssl=prefer`
+- **Pydantic v2 validation**: Use `@field_validator` decorator for input validation
+- **Alembic async migrations**: Configured in `apps/api/app/alembic/env.py` with:
+  - `make_url()` to parse DATABASE_URL
+  - `url.set(query={"ssl": mode})` for SSL configuration
+  - Proper logging with `logger.info()`, `logger.error()`
+
+### Documentation
+
+- See `apps/api/README.md` for complete backend documentation
+- See `apps/web/README.md` for complete frontend documentation
+- See `apps/api/.env.example` for documented environment variables
+
 ## Claude Code Extension (Original)
 
 ### Skill Structure
@@ -173,19 +226,47 @@ skill-name/
 ## Environment Variables
 
 ### Backend (`apps/api/.env`)
-```
-DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/gr8diy
-REDIS_URL=redis://localhost:6379/0
-JWT_SECRET_KEY=change-in-production
-JWT_ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=30
-REFRESH_TOKEN_EXPIRE_DAYS=7
-CORS_ORIGINS=http://localhost:3000
-```
+
+See `apps/api/.env.example` for complete documentation with [REQUIRED]/[OPTIONAL] flags.
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `DATABASE_URL` | Yes | - | PostgreSQL URL with asyncpg driver |
+| `REDIS_URL` | No | `redis://localhost:6379/0` | Redis URL for sessions |
+| `JWT_SECRET_KEY` | Yes | - | Secret key for JWT signing |
+| `ENVIRONMENT` | No | `development` | Environment: development/staging/production |
+| `DEBUG` | No | `false` | Enable debug mode |
+| `CORS_ORIGINS` | No | `http://localhost:3000` | Allowed CORS origins (comma-separated) |
 
 ### Frontend (`apps/web/.env`)
-```
-NEXT_PUBLIC_API_URL=http://localhost:8000
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `NEXT_PUBLIC_API_URL` | Yes | `http://localhost:8000` | Backend API URL |
+
+## Troubleshooting
+
+### Common Development Issues
+
+| Issue | Solution |
+|-------|----------|
+| `pnpm dev` shows workspaces warning | Ensure `pnpm-workspace.yaml` exists (workspaces field removed from package.json) |
+| turbo.json `pipeline` error | Update to use `tasks` instead of `pipeline` for Turbo v2 |
+| PostCSS `plugins` key error | Rename `postcss.config.js` to `postcss.config.cjs` (CommonJS) |
+| Module not found: react-query-devtools | Add `@tanstack/react-query-devtools` to devDependencies |
+| Windows UTF-8 encoding error | Run `chcp 65001` before `pnpm dev` in PowerShell |
+| Alembic SSL errors | Set `ENVIRONMENT=development` in `.env` to disable SSL locally |
+
+### Cache Clearing
+
+If you encounter unexpected build issues:
+
+```bash
+# Clear all caches
+rm -rf apps/web/.next .turbo node_modules/.cache
+
+# Reinstall dependencies
+pnpm install
 ```
 
 ## Language Context

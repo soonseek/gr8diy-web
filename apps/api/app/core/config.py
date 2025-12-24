@@ -1,4 +1,5 @@
 """Application configuration."""
+import secrets
 from functools import lru_cache
 
 from pydantic import Field, field_validator
@@ -30,13 +31,34 @@ class Settings(BaseSettings):
     REDIS_URL: str = Field(default="redis://localhost:6379/0")
 
     # JWT
-    JWT_SECRET_KEY: str = Field(default="change-this-secret-key-in-production")
+    JWT_SECRET_KEY: str = Field(default="")  # No default - must be set
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
+    # Password Policy
+    PASSWORD_MIN_LENGTH: int = 8
+    PASSWORD_REQUIRE_UPPERCASE: bool = True
+    PASSWORD_REQUIRE_LOWERCASE: bool = True
+    PASSWORD_REQUIRE_DIGIT: bool = True
+    PASSWORD_REQUIRE_SPECIAL: bool = True
+
     # CORS - can be string or list, will be validated and normalized to list
     CORS_ORIGINS: str | list[str] = Field(default="http://localhost:3000")
+
+    @field_validator("JWT_SECRET_KEY")
+    @classmethod
+    def validate_jwt_secret(cls, v: str) -> str:
+        """Validate JWT secret key is strong enough."""
+        if not v:
+            raise ValueError(
+                "JWT_SECRET_KEY must be set. Generate with: python -c 'import secrets; print(secrets.token_urlsafe(32))'"
+            )
+        if len(v) < 32:
+            raise ValueError("JWT_SECRET_KEY must be at least 32 characters long")
+        if v in ["change-this-secret-key-in-production", "secret", "test"]:
+            raise ValueError("JWT_SECRET_KEY must be changed from the default value")
+        return v
 
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod

@@ -5,6 +5,7 @@ export const api = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
+  withCredentials: true, // Important: Allow cookies to be sent/received
 });
 
 // Request interceptor to add auth token
@@ -31,24 +32,22 @@ api.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        const refreshToken = localStorage.getItem("refresh_token");
-        if (refreshToken) {
-          const response = await axios.post(
-            `${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/refresh`,
-            { refresh_token: refreshToken }
-          );
+        // Token is now handled via httpOnly cookie - no need to send refresh_token in body
+        const response = await axios.post(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/refresh`,
+          {},  // Empty body - refresh_token comes from httpOnly cookie
+          { withCredentials: true }  // Important: Allow cookies
+        );
 
-          const { access_token, refresh_token: newRefreshToken } = response.data;
-          localStorage.setItem("access_token", access_token);
-          localStorage.setItem("refresh_token", newRefreshToken);
+        const { access_token } = response.data;
+        localStorage.setItem("access_token", access_token);
 
-          originalRequest.headers.Authorization = `Bearer ${access_token}`;
-          return api(originalRequest);
-        }
+        originalRequest.headers.Authorization = `Bearer ${access_token}`;
+        return api(originalRequest);
       } catch (refreshError) {
         // Refresh failed, redirect to login
         localStorage.removeItem("access_token");
-        localStorage.removeItem("refresh_token");
+        // Note: refresh_token cookie is httpOnly, cleared by server on /logout
         if (typeof window !== "undefined") {
           window.location.href = "/login";
         }

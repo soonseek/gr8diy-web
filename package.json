@@ -3,10 +3,6 @@
   "private": true,
   "version": "0.1.0",
   "description": "Full-stack application with FastAPI + Next.js",
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build",

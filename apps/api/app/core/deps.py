@@ -6,7 +6,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import verify_token
-from app.db.session import async_session_maker
+from app.db.base import async_session_maker
 from app.models.user import User
 from app.services.user import get_user_by_id
 
@@ -50,7 +50,8 @@ async def get_current_user(
             detail="Invalid authentication credentials",
         )
 
-    user = await get_user_by_id(db, int(user_id))
+    # Fixed: user_id is already a string UUID, don't cast to int
+    user = await get_user_by_id(db, user_id)
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
