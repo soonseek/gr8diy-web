@@ -1,0 +1,19 @@
+# Development override - use with: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+version: '3.9'
+
+services:
+  api:
+    volumes:
+      - ./apps/api:/app
+    environment:
+      - DEBUG=true
+      - RELOAD=true
+
+  # Add adminer for database management
+  adminer:
+    image: adminer:latest
+    container_name: gr8diy-adminer
+    ports:
+      - '8080:8080'
+    depends_on:
+      - postgres
