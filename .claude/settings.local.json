@@ -5,7 +5,8 @@
       "Bash(alembic revision:*)",
       "Bash(turbo run:*)",
       "Bash(pnpm turbo typecheck:*)",
-      "Bash(pnpm typecheck)"
+      "Bash(pnpm typecheck)",
+      "Bash(powershell:*)"
     ]
   }
 }
