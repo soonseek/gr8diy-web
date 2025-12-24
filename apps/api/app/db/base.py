@@ -25,10 +25,12 @@ class Base(DeclarativeBase):
 
 
 async def init_db() -> None:
-    """Initialize database."""
-    async with engine.begin() as conn:
-        # Import all models here to ensure they are registered
-        from app.models import user  # noqa: F401
+    """
+    Initialize database connection.
 
-        # Create tables (use Alembic for migrations in production)
-        await conn.run_sync(lambda conn: None)
+    Note: This function ensures models are imported and registered with SQLAlchemy.
+    Actual table creation is handled by Alembic migrations.
+    Use `alembic upgrade head` to create/modify tables in production.
+    """
+    # Import all models here to ensure they are registered with Base.metadata
+    from app.models import user  # noqa: F401

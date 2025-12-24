@@ -35,14 +35,22 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
-    # CORS - stored as string, parsed into list via property
-    CORS_ORIGINS: str = Field(default="http://localhost:3000")
+    # CORS - can be string or list, will be validated and normalized to list
+    CORS_ORIGINS: str | list[str] = Field(default="http://localhost:3000")
+
+    @field_validator("CORS_ORIGINS", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, v: str | list[str]) -> list[str]:
+        """Parse CORS origins from string or list."""
+        if isinstance(v, str):
+            return [origin.strip() for origin in v.split(",") if origin.strip()]
+        return v
 
     @property
     def cors_origins_list(self) -> list[str]:
-        """Get CORS origins as list."""
+        """Get CORS origins as list (already validated by field_validator)."""
         if isinstance(self.CORS_ORIGINS, str):
-            return [origin.strip() for origin in self.CORS_ORIGINS.split(",")]
+            return [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()]
         return self.CORS_ORIGINS
 
 

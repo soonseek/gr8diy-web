@@ -91,21 +91,40 @@ When the backend is running:
 
 ### Backend (`apps/api/.env`)
 
-```bash
-DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/gr8diy
-REDIS_URL=redis://localhost:6379/0
-JWT_SECRET_KEY=your-secret-key-change-in-production
-JWT_ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=30
-REFRESH_TOKEN_EXPIRE_DAYS=7
-CORS_ORIGINS=http://localhost:3000
-```
+See `apps/api/.env.example` for complete documentation with required/optional flags.
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `DATABASE_URL` | Yes | - | PostgreSQL URL with asyncpg driver |
+| `REDIS_URL` | No | `redis://localhost:6379/0` | Redis URL for sessions |
+| `JWT_SECRET_KEY` | Yes | - | Secret key for JWT signing |
+| `ENVIRONMENT` | No | `development` | Environment: development/staging/production |
+| `DEBUG` | No | `false` | Enable debug mode |
+| `CORS_ORIGINS` | No | `http://localhost:3000` | Allowed CORS origins (comma-separated) |
+
+**Important**: SSL is automatically configured based on `ENVIRONMENT`:
+- Development: SSL disabled
+- Production: SSL preferred
 
 ### Frontend (`apps/web/.env`)
 
 ```bash
 NEXT_PUBLIC_API_URL=http://localhost:8000
 ```
+
+## Detailed Documentation
+
+- **Backend API**: See `apps/api/README.md` for:
+  - Complete setup guide
+  - API endpoints reference
+  - Database migration guide
+  - Authentication flow
+  - Troubleshooting
+
+- **Frontend**: See `apps/web/README.md` for:
+  - Next.js App Router patterns
+  - Component architecture
+  - State management patterns
 
 ## Database Migrations
 
