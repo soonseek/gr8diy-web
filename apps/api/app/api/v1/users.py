@@ -4,7 +4,7 @@ from typing import List
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_active_user
+from app.core.deps import get_current_active_user
 from app.api.v1.auth import router as auth_router
 from app.core.deps import get_db
 from app.models.user import User

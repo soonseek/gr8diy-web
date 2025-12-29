@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
 import { Github, Menu, X } from "lucide-react";
 import { useState } from "react";
 
@@ -51,11 +50,13 @@ export function Header() {
 
         {/* CTA Button */}
         <div className="hidden md:block">
-          <Button size="sm" className="rounded-full" asChild>
-            <Link href="/create" aria-label="알고리즘 만들기 페이지로 이동">
-              알고리즘 만들기
-            </Link>
-          </Button>
+          <Link
+            href="/create"
+            aria-label="알고리즘 만들기 페이지로 이동"
+            className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-9 rounded-md px-3"
+          >
+            알고리즘 만들기
+          </Link>
         </div>
 
         {/* Mobile Menu Button */}
@@ -102,11 +103,13 @@ export function Header() {
                 )}
               </Link>
             ))}
-            <Button size="sm" className="rounded-full w-full" asChild>
-              <Link href="/create" onClick={() => setMobileMenuOpen(false)}>
-                알고리즘 만들기
-              </Link>
-            </Button>
+            <Link
+              href="/create"
+              onClick={() => setMobileMenuOpen(false)}
+              className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-9 rounded-md px-3 w-full"
+            >
+              알고리즘 만들기
+            </Link>
           </nav>
         </div>
       )}

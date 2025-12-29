@@ -6,7 +6,20 @@
       "Bash(turbo run:*)",
       "Bash(pnpm turbo typecheck:*)",
       "Bash(pnpm typecheck)",
-      "Bash(powershell:*)"
+      "Bash(powershell:*)",
+      "Bash(test:*)",
+      "Bash(python:*)",
+      "Bash(pip install:*)",
+      "Bash(docker ps:*)",
+      "Bash(uvicorn:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(taskkill:*)",
+      "Bash(pnpm dev)",
+      "Bash(curl:*)",
+      "Bash(pnpm dev:*)",
+      "Bash(npx next dev:*)",
+      "Bash(npx tsc:*)"
     ]
   }
 }

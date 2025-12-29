@@ -1,11 +1,10 @@
 """Authentication endpoints."""
 import logging
 from datetime import timedelta
-from typing import Response
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from fastapi import APIRouter, Depends, HTTPException, status, Response
+from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
 from fastapi.security import OAuth2PasswordRequestForm
 
 from app.core.config import get_settings

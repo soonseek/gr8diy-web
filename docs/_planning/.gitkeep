@@ -1,0 +1,19 @@
+# _planning 디렉토리
+
+이 디렉토리는 문서화 작업 계획 및 진척도 관리용입니다.
+
+## 파일 목적
+
+| 파일 | 목적 |
+|------|------|
+| `documentation-roadmap.md` | 전체 문서화 로드맵 (Phase별 작업 순서) |
+| `progress.md` | 현재 진척도 및 최근 활동 |
+| `changelog.md` | 문서 변경 로그 (PRD 수정 이력) |
+| `_archive/` | 완료된 작업 계획 보관 |
+
+## 작업 흐름
+
+1. 새로운 작업 시작 시 `documentation-roadmap.md` 참조
+2. 작업 완료 시 `progress.md` 업데이트
+3. PRD나 상위 문서 수정 시 `changelog.md` 기록
+4. Phase 완료 시 해당 계획을 `_archive/`로 이동
