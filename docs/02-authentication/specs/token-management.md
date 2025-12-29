@@ -10,9 +10,9 @@ from jose import jwt
 from app.core.config import settings
 
 def create_access_token(data: dict) -> str:
-    """Access Token 생성 (15분)"""
+    """Access Token 생성 (30분)"""
     to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(minutes=15)
+    expire = datetime.utcnow() + timedelta(minutes=30)
     to_encode.update({
         "exp": expire,
         "iat": datetime.utcnow(),
@@ -98,15 +98,18 @@ async def refresh_token(
     await redis_client.delete(f"refresh_token:{user_id}:{refresh_token}")
     await redis_client.setex(
         f"refresh_token:{user_id}:{new_refresh_token}",
-        86400,
-        "1"
+        604800,  # 7일
+        json.dumps({
+            "user_id": str(user_id),
+            "expires_at": (datetime.utcnow() + timedelta(days=7)).isoformat()
+        })
     )
 
     return {
         "access_token": access_token,
         "refresh_token": new_refresh_token,
         "token_type": "bearer",
-        "expires_in": 900
+        "expires_in": 1800  # 30분
     }
 ```
 
@@ -119,11 +122,11 @@ async def refresh_token(
 로그아웃 시 Access Token을 블랙리스트에 추가:
 
 ```python
-async def add_to_blacklist(access_token: str, expires_in: int):
+async def add_to_blacklist(access_token: str, expires_in: int = 1800):
     """Access Token 블랙리스트 추가"""
     await redis_client.setex(
         f"blacklist:{access_token}",
-        expires_in,
+        expires_in,  # 기본 30분 (access_token 남은 유효기간)
         "revoked"
     )
 ```
@@ -216,10 +219,10 @@ async def verify_refresh_token(
 ```python
 await redis_client.setex(
     f"refresh_token:{user_id}:{token_id}",
-    86400,  # 1일
+    604800,  # 7일
     json.dumps({
         "user_id": str(user_id),
-        "expires_at": (datetime.utcnow() + timedelta(days=1)).isoformat()
+        "expires_at": (datetime.utcnow() + timedelta(days=7)).isoformat()
     })
 )
 ```

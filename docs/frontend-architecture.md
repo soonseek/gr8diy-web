@@ -94,6 +94,11 @@ CVA(class-variance-authority) 기반의 shadcn/ui 패턴:
 - Table, Pagination
 
 ## Web3 연동 (선택적)
+
+### 블록체인 비활성화 모드
+
+gr8diy-web은 **블록체인 비활성화 모드**를 지원하여 오픈소스 배포와 로컬 개발을 용이하게 합니다.
+
 ```typescript
 // lib/contracts.ts - 블록체인 연동
 import { getContract } from "thirdweb";
@@ -116,6 +121,43 @@ export function useWalletConnection() {
 
   // thirdweb SDK 사용
   // ...
+}
+```
+
+### 환경별 동작 차이
+
+| 기능 | 블록체인 활성화 | 블록체인 비활성화 |
+|------|---------------|------------------|
+| **월렛 연동** | MetaMask, WalletConnect | 월렛 UI 숨김 |
+| **Tier 조회** | 온체인 G8DStaking | users.manual_tier (관리자 부여) |
+| **수수료 할인** | Tier 기반 적용 | 수동 Tier 기반 적용 |
+| **Web3 호출** | thirdweb SDK | 모두 건너뜀 |
+
+### 환경 변수
+
+```bash
+# .env.local
+NEXT_PUBLIC_BLOCKCHAIN_ENABLED=true   # 블록체인 활성화
+NEXT_PUBLIC_BLOCKCHAIN_ENABLED=false  # 블록체인 비활성화 (오픈소스/로컬)
+```
+
+### 컴포넌트에서의 분기 처리
+
+```tsx
+// components/wallet/WalletConnect.tsx
+"use client";
+
+import { useBlockchainStore } from "@/stores/blockchain";
+import { isBlockchainEnabled } from "@/lib/contracts";
+
+export function WalletConnectButton() {
+  const isEnabled = useBlockchainStore((state) => state.isEnabled);
+
+  if (!isEnabled) {
+    return null;  // 블록체인 비활성화 시 숨김
+  }
+
+  return <ConnectWallet />;
 }
 ```
 

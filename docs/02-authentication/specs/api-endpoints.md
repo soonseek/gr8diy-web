@@ -92,10 +92,14 @@ class LoginRequest(BaseModel):
 ```json
 {
   "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "token_type": "bearer",
-  "expires_in": 900
+  "expires_in": 1800
 }
+```
+
+**Response Headers**:
+```
+Set-Cookie: refresh_token=...; HttpOnly; Secure; SameSite=Strict; Max-Age=604800
 ```
 
 **401 Unauthorized**:
@@ -115,7 +119,12 @@ class LoginRequest(BaseModel):
 
 **Headers**:
 ```
-Authorization: Bearer {refresh_token}
+Authorization: Bearer {access_token}
+```
+
+**Cookies**: httpOnly 쿠키에서 자동 전송
+```
+refresh_token={value}
 ```
 
 **Body**: 없음
@@ -126,10 +135,14 @@ Authorization: Bearer {refresh_token}
 ```json
 {
   "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "token_type": "bearer",
-  "expires_in": 900
+  "expires_in": 1800
 }
+```
+
+**Response Headers**:
+```
+Set-Cookie: refresh_token=...; HttpOnly; Secure; SameSite=Strict; Max-Age=604800
 ```
 
 **401 Unauthorized**:
@@ -155,7 +168,12 @@ Authorization: Bearer {refresh_token}
 
 **Headers**:
 ```
-Authorization: Bearer {refresh_token}
+Authorization: Bearer {access_token}
+```
+
+**Cookies**: httpOnly 쿠키에서 자동 전송
+```
+refresh_token={value}
 ```
 
 **Body**: 없음
@@ -163,6 +181,11 @@ Authorization: Bearer {refresh_token}
 ### Response
 
 **204 No Content**
+
+**Response Headers**:
+```
+Set-Cookie: refresh_token=; Max-Age=0
+```
 
 **401 Unauthorized**:
 ```json
@@ -367,16 +390,26 @@ async def login(
     # Redis에 refresh_token 저장
     await redis_client.setex(
         f"refresh_token:{user.id}:{refresh_token}",
-        86400,  # 1일
-        "1"
+        604800,  # 7일
+        json.dumps({
+            "user_id": str(user.id),
+            "expires_at": (datetime.utcnow() + timedelta(days=7)).isoformat()
+        })
     )
 
-    return {
+    # httpOnly 쿠키로도 전송
+    response = {
         "access_token": access_token,
-        "refresh_token": refresh_token,
         "token_type": "bearer",
-        "expires_in": 900  # 15분
+        "expires_in": 1800  # 30분
     }
+
+    # 쿠키 설정 (FastAPI Response 객체 사용 필요)
+    # return JSONResponse(content=response, headers={
+    #     "Set-Cookie": f"refresh_token={refresh_token}; HttpOnly; Secure; SameSite=Strict; Max-Age=604800"
+    # })
+
+    return response
 ```
 
 ### 9.3 종속성 (Dependencies)

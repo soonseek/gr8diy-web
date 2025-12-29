@@ -10,6 +10,7 @@
 | email | VARCHAR(255) | NOT NULL | - | UNIQUE |
 | hashed_password | VARCHAR(255) | NOT NULL | - | - |
 | full_name | VARCHAR(100) | NULL | - | - |
+| manual_tier | INTEGER | NULL | - | CHECK (manual_tier >= 0 AND manual_tier <= 5) |
 | is_active | BOOLEAN | NOT NULL | true | - |
 | is_superuser | BOOLEAN | NOT NULL | false | - |
 | created_at | TIMESTAMPTZ | NOT NULL | NOW() | - |

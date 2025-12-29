@@ -19,19 +19,19 @@ gr8diy-web는 **JWT (JSON Web Token)** 기반의 이중 토큰 방식을 사용�
 
 | 토큰 | 만료 기간 | 설명 |
 |------|-----------|------|
-| **Access Token** | 15분 | API 요청 시 사용 |
-| **Refresh Token** | 1일 | Access Token 갱신 시 사용 |
+| **Access Token** | 30분 | API 요청 시 사용 |
+| **Refresh Token** | 7일 | Access Token 갱신 시 사용 |
 
 **정책 이유**:
-- 짧은 Access Token: 탈취 시 피해 최소화
-- 1일 Refresh Token: 사용자가 하루에 한 번만 재로그인
+- 적절한 길이의 Access Token: 탈취 시 피해 최소화 + 사용자 경험
+- 7일 Refresh Token: 사용자가 1주일에 한 번만 재로그인
 
 ### 1.3 토큰 저장 위치
 
 | 토큰 | 저장 위치 | 설명 |
 |------|-----------|------|
 | Access Token | localStorage | 프론트엔드에서 관리 |
-| Refresh Token | Redis (서버) | 서버에서 관리, 탈취 방지 |
+| Refresh Token | Redis (서버) + httpOnly 쿠키 | 서버에서 유효성 검증, 쿠키로 전송 (XSS 방지) |
 
 ## 2. 인증 플로우
 
@@ -63,45 +63,56 @@ gr8diy-web는 **JWT (JSON Web Token)** 기반의 이중 토큰 방식을 사용�
 
 2. FastAPI → 이메일 조회 (PostgreSQL)
           → bcrypt 비밀번호 검증
-          → access_token 생성 (15분, JWT)
-          → refresh_token 생성 (1일, UUID)
-          → refresh_token 저장 (Redis, TTL 1일)
+          → access_token 생성 (30분, JWT)
+          → refresh_token 생성 (7일, UUID)
+          → refresh_token 저장 (Redis, TTL 7일)
+          → refresh_token을 httpOnly 쿠키로 설정
 
 3. Client ← {
      access_token,
-     refresh_token,
-     token_type: "bearer"
+     token_type: "bearer",
+     expires_in: 1800
    }
+   + Set-Cookie: refresh_token=...; HttpOnly; Secure; SameSite=Strict; Max-Age=604800
 
-4. Client → localStorage에 토큰 저장
+4. Client → localStorage에 access_token 저장
+           → httpOnly 쿠키는 자동 전송됨
 ```
 
 ### 2.3 토큰 갱신 플로우
 ```
 1. Client → POST /api/v1/auth/refresh
-   Authorization: Bearer {refresh_token}
+   (httpOnly 쿠키가 자동으로 refresh_token 전송)
 
-2. FastAPI → Redis에서 refresh_token 조회
-          → 토큰 유효성 검증
-          → 새 access_token 생성 (15분)
-          → 새 refresh_token 생성 (Rotation, 1일)
+2. FastAPI → 쿠키에서 refresh_token 추출
+          → Redis에서 refresh_token 조회 및 유효성 검증
+          → 새 access_token 생성 (30분)
+          → 새 refresh_token 생성 (Rotation, 7일)
           → 기존 refresh_token 삭제 (Redis)
 
-3. Client ← { access_token, refresh_token }
+3. Client ← {
+     access_token,
+     token_type: "bearer",
+     expires_in: 1800
+   }
+   + Set-Cookie: refresh_token=...; HttpOnly; Secure; SameSite=Strict; Max-Age=604800
 ```
 
 ### 2.4 로그아웃 플로우
 ```
 1. Client → POST /api/v1/auth/logout
-   Authorization: Bearer {refresh_token}
+   Authorization: Bearer {access_token}
+   (httpOnly 쿠키가 자동으로 refresh_token 전송)
 
-2. FastAPI → 현재 user 식별 (refresh_token)
+2. FastAPI → 현재 user 식별 (access_token)
           → Redis에서 refresh_token 삭제
+          → httpOnly 쿠키 만료 처리
           → (선택) access_token 블랙리스트 추가
 
 3. Client ← 204 No Content
+   + Set-Cookie: refresh_token=; Max-Age=0
 
-4. Client → localStorage 토큰 삭제
+4. Client → localStorage에서 access_token 삭제
 ```
 
 ## 3. 보안 전략
@@ -132,8 +143,9 @@ gr8diy-web는 **JWT (JSON Web Token)** 기반의 이중 토큰 방식을 사용�
 
 ### 3.5 레이트 리밋
 
-- `/login`: 5회/5분 (IP 기반)
-- `/register`: 3회/시간 (IP 기반)
+- `/login`: 5회/분 (IP 기반)
+- `/register`: 3회/5분 (IP 기반)
+- `/refresh`: 10회/분 (IP 기반)
 
 ---
 
@@ -145,18 +157,18 @@ gr8diy-web는 **JWT (JSON Web Token)** 기반의 이중 토큰 방식을 사용�
 ```
 Key: refresh_token:{user_id}:{token_id}
 Value: {
-  "expires_at": "2025-01-30T12:00:00Z",
+  "expires_at": "2025-02-05T12:00:00Z",
   "ip_address": "192.168.1.1",
   "user_agent": "Mozilla/5.0..."
 }
-TTL: 1일 (86400초)
+TTL: 7일 (604800초)
 ```
 
 **access_token 블랙리스트** (선택):
 ```
 Key: blacklist:{access_token}
 Value: "revoked"
-TTL: 15분 (900초)
+TTL: 30분 (1800초)
 ```
 
 **로그인 기록** (선택):
@@ -196,13 +208,13 @@ TTL: 30일
 ```
 refresh_token:{user_id}:{token_id} = {
   "user_id": 123,
-  "expires_at": "2025-01-05T00:00:00Z",
+  "expires_at": "2025-02-05T00:00:00Z",
   "created_at": "2024-12-29T00:00:00Z",
   "ip_address": "192.168.1.1",
   "user_agent": "Mozilla/5.0..."
 }
 
-TTL: 1일 (86400초)
+TTL: 7일 (604800초)
 ```
 
 ## 6. 프론트엔드 구현

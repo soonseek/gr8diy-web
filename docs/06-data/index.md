@@ -16,10 +16,16 @@ gr8diy-web의 데이터베이스는 **PostgreSQL**을 사용하며, 주요 테�
 | email | VARCHAR(255) | UK, 이메일 |
 | hashed_password | VARCHAR(255) | bcrypt 해시 |
 | full_name | VARCHAR(100) | 전체 이름 |
+| manual_tier | INTEGER | 수동 Tier (0~5, NULL=기본값 사용) |
 | is_active | BOOLEAN | 활성화 여부 |
 | is_superuser | BOOLEAN | 관리자 여부 |
 | created_at | TIMESTAMPTZ | 생성 일시 |
 | updated_at | TIMESTAMPTZ | 수정 일시 |
+
+**참고**:
+- `manual_tier`는 블록체인 비활성화 모드에서 관리자가 수동으로 부여하는 Tier (T0~T5)
+- 블록체인 활성화 모드에서는 `staking_records` 테이블과 온체인 G8DStaking 컨트랙트의 Tier를 우선 적용
+- `manual_tier`가 NULL인 경우 기본값 T0로 처리
 
 **인덱스**: `idx_users_email (email)`
 
@@ -209,24 +215,38 @@ gr8diy-web의 데이터베이스는 **PostgreSQL**을 사용하며, 주요 테�
 | created_at | TIMESTAMPTZ | 생성 일시 |
 | updated_at | TIMESTAMPTZ | 수정 일시 |
 
+**정책**:
+- 사용자는 **하나의 월렛만** 연동 가능 (1:1 관계)
+- 월렛 변경 가능: 새 월렛으로 연동 시 기존 월렛은 비활성화
+- 월렛 변경 시 기존 스테이킹 Tier는 초기화됨 (온체인 G8DStaking 기준)
+- 블록체인 비활성화 모드에서는 이 테이블 미사용
+
 **인덱스**: `idx_wallets_user_id`, `idx_wallets_address`
 
 ---
 
-### 2.12 follows (팔로우)
+### 2.12 follows (전략 팔로우/구독)
 
 | 컬럼 | 타입 | 설명 |
 |------|------|------|
 | id | UUID | PK |
-| follower_id | UUID | FK → users(id), CASCADE (팔로워) |
-| following_id | UUID | FK → users(id), CASCADE (팔로잉) |
-| strategy_id | UUID | FK → strategies(id) |
+| follower_id | UUID | FK → users(id), CASCADE (팔로워: 구독하는 사용자) |
+| following_id | UUID | FK → users(id), CASCADE (팔로잉: 전략 소유자) |
+| strategy_id | UUID | FK → strategies(id) (구독하는 전략) |
 | is_active | BOOLEAN | 활성화 여부 |
 | onchain_tx_hash | VARCHAR(66) | 온체인 트랜잭션 해시 |
 | created_at | TIMESTAMPTZ | 생성 일시 |
 | updated_at | TIMESTAMPTZ | 수정 일시 |
 
-**제약조건**: `CHECK (follower_id != following_id)`, `UNIQUE (follower_id, following_id, strategy_id)`
+**용어 정의**:
+- **Follow (팔로우)**: 사용자가 다른 사용자의 **전략을 구독**하는 기능
+- **follower**: 구독을 시작하는 사용자
+- **following**: 전략 소유자 (구독당하는 사용자)
+- **strategy_id**: 구독하는 특정 전략
+
+**제약조건**:
+- `CHECK (follower_id != following_id)` - 자기 자신의 전략은 구독 불가
+- `UNIQUE (follower_id, following_id, strategy_id)` - 중복 구독 방지
 
 **인덱스**: `idx_follows_follower_id`, `idx_follows_following_id`, `idx_follows_strategy_id`
 

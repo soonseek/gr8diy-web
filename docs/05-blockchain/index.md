@@ -518,9 +518,9 @@ BLOCKCHAIN_ENABLED=false  # 블록체인 완전 비활성화
 | 기능 | 활성화 모드 | 비활성화 모드 |
 |------|-----------|--------------|
 | **월렛 연결** | MetaMask 등 연결 | 월렛 UI 숨김 |
-| **스테이킹** | G8D 스테이킹 | 항상 T0 (기본) |
-| **수수료 할인** | Tier 기반 0~50% | 0% (할인 없음) |
-| **저작료 증가** | Tier 기반 0~100% | 기본 10%만 적용 |
+| **스테이킹** | G8D 스테이킹 | 관리자 수동 Tier 부여 (users.manual_tier) |
+| **수수료 할인** | Tier 기반 0~50% | 수동 부여된 Tier 기반 적용 (기본 T0) |
+| **저작료 증가** | Tier 기반 0~100% | 수동 부여된 Tier 기반 적용 (기본 T0) |
 | **팔로우** | 온체인 등록 | 오프체인 DB만 |
 | **정산** | 온체인 Settlement | 오프체인 크레딧만 |
 | **Web3 호출** | thirdweb SDK 사용 | 모두 건너뜀 |
@@ -536,12 +536,27 @@ export const isBlockchainEnabled = () => {
 // 훅에서 분기
 export function useUserTier() {
   if (!isBlockchainEnabled()) {
-    return { tier: 0, discount: 0 };  // 항상 T0
+    // 오프체인 사용자의 수동 Tier 조회 (API 호출)
+    const { data: user } = useQuery(['me'], fetchUser);
+    return {
+      tier: user?.manual_tier ?? 0,  // 기본 T0
+      discount: getDiscountBps(user?.manual_tier ?? 0)
+    };
   }
 
   // 온체인 스테이킹 조회
   return useReadContract({...});
 }
+
+// 백엔드에서도 동일하게 처리
+async def get_user_tier(user_id: UUID, db: AsyncSession) -> int:
+    if not settings.BLOCKCHAIN_ENABLED:
+        # 오프체인 모드: users 테이블의 manual_tier 사용
+        user = await db.get(User, user_id)
+        return user.manual_tier if user.manual_tier is not None else 0
+    else:
+        # 온체인 모드: G8DStaking 컨트랙트 조회
+        return await web3_contract.functions.tierOf(user.wallet_address)
 ```
 
 ### 10.4 오픈소스 배려

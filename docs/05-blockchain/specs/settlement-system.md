@@ -129,6 +129,52 @@ export function getRuntimeConfig() {
 
 ## 3. 일일 정산 프로세스
 
+### 3.0 Tier 조회 (환경별 분기)
+
+```python
+# services/staking/tier_service.py
+from app.core.config import settings
+from sqlalchemy import select
+from app.models.user import User
+
+async def get_user_tier(
+    user_id: str,
+    db: AsyncSession
+) -> int:
+    """
+    블록체인 활성화/비활성화 모드에 따른 Tier 조회
+
+    Args:
+        user_id: 사용자 ID
+        db: 데이터베이스 세션
+
+    Returns:
+        Tier (0~5)
+    """
+    if not settings.BLOCKCHAIN_ENABLED:
+        # 오프체인 모드: users 테이블의 manual_tier 사용
+        result = await db.execute(
+            select(User.manual_tier).where(User.id == user_id)
+        )
+        manual_tier = result.scalar_one_or_none()
+        return manual_tier if manual_tier is not None else 0
+    else:
+        # 온체인 모드: G8DStaking 컨트랙트 조회
+        # 먼저 사용자의 월렛 주소 조회
+        result = await db.execute(
+            select(User.wallet_address).where(User.id == user_id)
+        )
+        wallet_address = result.scalar_one_or_none()
+
+        if not wallet_address:
+            return 0  # 월렛 연동 없으면 T0
+
+        # G8DStaking 컨트랙트에서 Tier 조회
+        from app.core.web3 import web3_client
+        tier = await web3_client.contract.functions.tierOf(wallet_address).call()
+        return tier
+```
+
 ### 3.1 정산 준비 (백엔드)
 
 ```python
@@ -181,9 +227,9 @@ class SettlementPreparation:
             user_id = order.user_id
             volume = Decimal(str(order.volume))
 
-            # Tier 조회
-            tier = await self.staking_service.get_user_tier(user_id)
-            author_tier = await self.staking_service.get_user_tier(order.author_id)
+            # Tier 조회 (블록체인 활성화/비활성화 모드 분기)
+            tier = await self.staking_service.get_user_tier(user_id, db)
+            author_tier = await self.staking_service.get_user_tier(order.author_id, db)
 
             # 수수료 계산
             fee = await self.calculate_fee(
